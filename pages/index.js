@@ -1,63 +1,59 @@
-import {
-  Container,
-  Row,
-  Col,
-  Navbar,
-  Nav,
-  Media,
-  Image,
-  Card,
-} from "react-bootstrap";
-import MyNavbar from "components/myNavbar";
-import Intro from "components/intro";
-import ListItem from "components/list-item";
+import { Row, Col, Button } from "react-bootstrap";
+
 import GridItem from "components/grid-item";
-import { getAllPosts } from "lib/api";
+import Layout from "components/layout";
+import { getPaginatedPosts } from "lib/api";
+import Intro from "components/intro";
+import { useSWRInfinite } from "swr";
+import PreviewAlert from "components/preview-alert";
 
-export default function Home({ posts }) {
+const PAGE_LIMIT = 2;
+
+export default function Home({ posts, preview }) {
+  const { data, size, setSize, isValidating } = useSWRInfinite(
+    (index) => `/api/posts?page=${index}&limit=${PAGE_LIMIT}`,
+    { initialData: [posts] }
+  );
+
   return (
-    <Container>
-      <MyNavbar />
-      <div className="blog-detail-page">
-        <Row>
-          <Col md="12">
-            <Intro />
-          </Col>
-        </Row>
-        <pre>{JSON.stringify(posts, null, 2)}</pre>
-        <hr />
-
-        <div className={`page-wrapper`}>
-          <Row className="mb-5">
-            {/* <Col md="10">
-              <ListItem />
-            </Col> */}
-            {posts.map((post) => (
-              <Col md="4">
-                <GridItem post={post} />
-              </Col>
-            ))}
-          </Row>
-        </div>
+    <Layout>
+      <Row>
+        {preview && <PreviewAlert />}
+        <Col md="12">
+          <Intro />
+        </Col>
+      </Row>
+      <hr />
+      {/* <pre>{JSON.stringify(data, null, 2)}</pre> */}
+      <Row className="mb-5">
+        {data.map((page) =>
+          page.map((post) => (
+            <Col md={12 / PAGE_LIMIT}>
+              <GridItem post={post} />
+            </Col>
+          ))
+        )}
+      </Row>
+      <div style={{ textAlign: "center" }}>
+        {data[data.length - 1].length !== 0 &&
+          (isValidating ? (
+            <div>Tvp xvleene vv</div>
+          ) : (
+            <Button onClick={() => setSize(size + 1)}>Цааш нь ...</Button>
+          ))}
       </div>
-      <footer className="page-footer">
-        <div>
-          <a href="#">нүүр</a>
-          {" | "}
-          <a href="#">сургалт</a>
-          {" | "}
-          <a href="#">фэйсбүүк</a>
-        </div>
-      </footer>
-    </Container>
+    </Layout>
   );
 }
 
-export const getStaticProps = async () => {
-  const posts = await getAllPosts();
+export const getStaticProps = async ({ preview = false }) => {
+  const posts = await getPaginatedPosts(0, PAGE_LIMIT);
+  console.log("index ahin build hiigdlee");
   return {
     props: {
       posts,
+      preview,
     },
+    revalidate: 300,
   };
 };
